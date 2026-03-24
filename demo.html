@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSS Grid Lanes — Interactive Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   rgba(255,255,255,0.04);
+      --border:    rgba(255,255,255,0.09);
+      --text:      #ffffff;
+      --muted:     rgba(255,255,255,0.45);
+      --dimmer:    rgba(255,255,255,0.28);
+      --code-text: #c8ffd4;
+      --code-bg:   rgba(0,0,0,0.45);
+      --mono:      'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      --serif:     'DM Serif Display', Georgia, serif;
+      --sans:      'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ── Layout wrapper ── */
+    #root { position: relative; z-index: 1; }
+
+    .page-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
+
+    @media (max-width: 640px) {
+      .page-inner { padding: 0 20px; }
+    }
+
+    /* ══════════════════════════════════════
+       HEADER
+    ══════════════════════════════════════ */
+    .site-header {
+      padding: 64px 0 48px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 48px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 32px;
+    }
+
+    .header-eyebrow {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      color: #e8ff47;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    .header-title {
+      font-family: var(--serif);
+      font-size: clamp(36px, 5vw, 64px);
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .header-title span {
+      color: rgba(255,255,255,0.35);
+    }
+
+    .header-desc {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.6;
+      font-weight: 300;
+    }
+
+    .header-desc code {
+      font-family: var(--mono);
+      color: #e8ff47;
+      background: rgba(232,255,71,0.1);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    /* ── Tolerance control panel ── */
+    .tolerance-panel {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px 24px;
+      min-width: 280px;
+      flex-shrink: 0;
+    }
+
+    .tolerance-label {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 12px;
+    }
+
+    .tolerance-value {
+      font-family: var(--mono);
+      font-size: 20px;
+      color: #47ffb8;
+      margin-bottom: 14px;
+      font-weight: 500;
+    }
+
+    .tolerance-value em {
+      font-style: normal;
+      color: #e8ff47;
+    }
+
+    .tolerance-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .tolerance-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+      padding: 5px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 11px;
+      transition: all 0.15s;
+      letter-spacing: 0.04em;
+    }
+
+    .tolerance-btn:hover {
+      border-color: rgba(255,255,255,0.3);
+      color: #fff;
+    }
+
+    .tolerance-btn.active {
+      background: rgba(232,255,71,0.12);
+      border-color: rgba(232,255,71,0.4);
+      color: #e8ff47;
+    }
+
+    .tolerance-desc {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      line-height: 1.5;
+      font-family: var(--sans);
+      min-height: 2.8em;
+    }
+
+    /* ── Live CSS snippet ── */
+    .css-snippet {
+      margin-top: 32px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 10px;
+      padding: 18px 22px;
+      border: 1px solid rgba(255,255,255,0.07);
+      display: inline-block;
+    }
+
+    .css-snippet pre {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--code-text);
+      white-space: pre;
+      margin: 0;
+    }
+
+    /* ══════════════════════════════════════
+       MASONRY GRID  (CSS columns fallback)
+       @supports block upgrades to grid-lanes
+    ══════════════════════════════════════ */
+    .masonry-grid {
+      columns: auto;
+      column-width: 260px;
+      column-gap: 16px;
+    }
+
+    .masonry-card-wrap {
+      break-inside: avoid;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    /* Progressive enhancement — Safari TP 234+ */
+    @supports (display: grid-lanes) {
+      .masonry-grid {
+        display: grid-lanes;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+        columns: unset;
+        column-width: unset;
+        column-gap: unset;
+      }
+      .masonry-card-wrap {
+        break-inside: unset;
+        margin-bottom: unset;
+      }
+    }
+
+    /* ══════════════════════════════════════
+       CARD
+    ══════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      cursor: default;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Top accent bar — colour set via inline style */
+    .card-accent-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      opacity: 0.7;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .card-tag {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      font-weight: 600;
+      margin-bottom: 2px;
+      /* colour set via inline style */
+    }
+
+    .card-title {
+      font-family: var(--serif);
+      font-weight: 400;
+      color: #fff;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+
+    .card--hero  .card-title { font-size: 22px; }
+    .card--tall  .card-title { font-size: 17px; }
+    .card--medium .card-title,
+    .card--short .card-title  { font-size: 15px; }
+
+    .card--hero  { min-height: 320px; }
+    .card--tall  { min-height: 260px; }
+    .card--medium { min-height: 180px; }
+    .card--short { min-height: 120px; }
+
+    .card-body {
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.58);
+      font-family: var(--sans);
+      flex-grow: 1;
+      margin: 0;
+    }
+
+    /* ── Code block inside card ── */
+    .code-block {
+      position: relative;
+      margin-top: 12px;
+      background: var(--code-bg);
+      border-radius: 6px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow-x: auto;
+    }
+
+    .code-block pre {
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.7;
+      color: var(--code-text);
+      white-space: pre;
+      margin: 0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #888;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-family: var(--mono);
+      font-size: 9px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover { color: #fff; border-color: rgba(255,255,255,0.35); }
+    .copy-btn.copied {
+      background: rgba(71,255,184,0.2);
+      border-color: rgba(71,255,184,0.4);
+      color: #47ffb8;
+    }
+
+    /* ── Table block inside card ── */
+    .table-block {
+      margin-top: 12px;
+      overflow-x: auto;
+    }
+
+    .table-block table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 10.5px;
+    }
+
+    .table-block th {
+      text-align: left;
+      padding: 5px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.5);
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 9px;
+    }
+
+    .table-block td {
+      padding: 5px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.5);
+    }
+
+    .table-block td:first-child {
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+    }
+
+    /* ══════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════ */
+    .site-footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 0;
+    }
+
+    .footer-note {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.2);
+    }
+
+    .footer-link {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: #e8ff47;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+    }
+
+    .footer-link:hover { opacity: 1; }
+
+    /* ══════════════════════════════════════
+       GRID SECTION WRAPPER
+    ══════════════════════════════════════ */
+    .grid-section {
+      padding: 0 0 80px;
+    }
+  </style>
+</head>
+<body>
+<div id="root">
+  <div class="page-inner">
+
+    <!-- ════════════ HEADER ════════════ -->
+    <header class="site-header">
+      <div class="header-top">
+
+        <!-- Left: title + description -->
+        <div>
+          <p class="header-eyebrow">CSS GRID LANES — INTERACTIVE DEMO</p>
+          <h1 class="header-title">
+            Masonry Layouts,<br>
+            <span>Native CSS.</span>
+          </h1>
+          <p class="header-desc">
+            A living demonstration of <code>display: grid-lanes</code> — the
+            cards below are laid out using the same technique they describe.
+            Resize the window to watch the columns adapt.
+          </p>
+        </div>
+
+        <!-- Right: tolerance simulator -->
+        <div class="tolerance-panel">
+          <p class="tolerance-label">FLOW TOLERANCE SIMULATOR</p>
+          <p class="tolerance-value">flow-tolerance: <em id="tol-display">1em</em></p>
+          <div class="tolerance-btns">
+            <button class="tolerance-btn" data-tol="0em">0em</button>
+            <button class="tolerance-btn" data-tol="0.5em">0.5em</button>
+            <button class="tolerance-btn active" data-tol="1em">1em</button>
+            <button class="tolerance-btn" data-tol="3em">3em</button>
+            <button class="tolerance-btn" data-tol="8em">8em</button>
+          </div>
+          <p class="tolerance-desc" id="tol-desc">
+            Default: differences under 1em treated as ties. Balanced packing vs. order.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Live CSS snippet -->
+      <div class="css-snippet">
+        <pre id="css-live">.container {
+  display: grid-lanes;                                    /* ← the magic */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  flow-tolerance: 1em;                                    /* ← adjust above */
+}</pre>
+      </div>
+    </header>
+
+    <!-- ════════════ MASONRY GRID ════════════ -->
+    <section class="grid-section">
+      <div class="masonry-grid" id="masonry-grid">
+        <!-- Cards injected by JS -->
+      </div>
+    </section>
+
+    <!-- ════════════ FOOTER ════════════ -->
+    <footer class="site-footer">
+      <span class="footer-note">CSS GRID LANES — SAFARI TECHNOLOGY PREVIEW 234+ — CSS WORKING GROUP DRAFT</span>
+      <a class="footer-link" href="https://webkit.org/demos/grid3" target="_blank" rel="noopener noreferrer">
+        webkit.org/demos/grid3 ↗
+      </a>
+    </footer>
+
+  </div><!-- /.page-inner -->
+</div><!-- /#root -->
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CARD DATA  — ported 1:1 from MasonryCSS-grid.jsx
+══════════════════════════════════════════════════════════════ */
+const CARDS = [
+  {
+    id: 1, size: "hero", tag: "DISPLAY MODE", accent: "#e8ff47",
+    title: "display: grid-lanes",
+    body: "A new CSS display mode that enables native masonry layouts — where items of varying heights stack tightly in columns without uniform row heights. No JavaScript required. No external libraries. Three lines of CSS.",
+    code: `.container {\n  display: grid-lanes;\n  grid-template-columns:\n    repeat(auto-fill, minmax(250px, 1fr));\n  gap: 16px;\n}`,
+  },
+  {
+    id: 2, size: "tall", tag: "CORE CONCEPT", accent: "#47c8ff",
+    title: "The Highway Mental Model",
+    body: "Think of items placed like cars merging onto a highway in bumper-to-bumper traffic. Each new item changes lanes to end up in whichever column gets it closest to the top — the shortest column at that moment. This produces the tight, gap-free stacking characteristic of masonry layouts.",
+  },
+  {
+    id: 3, size: "short", tag: "BROWSER SUPPORT", accent: "#ff8c47",
+    title: "Safari TP 234+",
+    body: "Available now in Safari Technology Preview. Being standardised by the CSS Working Group.",
+  },
+  {
+    id: 4, size: "medium", tag: "LAYOUT DIRECTION", accent: "#c847ff",
+    title: "Waterfall vs. Brick",
+    body: "Define lanes with grid-template-columns for a waterfall layout (items fall downward in columns). Define with grid-template-rows for a brick layout (items flow left to right in rows). The browser infers direction automatically from which axis you define.",
+    code: `/* Waterfall */\ndisplay: grid-lanes;\ngrid-template-columns: 1fr 1fr 1fr;\n\n/* Brick */\ndisplay: grid-lanes;\ngrid-template-rows: 1fr 1fr 1fr;`,
+  },
+  {
+    id: 5, size: "short", tag: "PROPERTY", accent: "#47ffb8",
+    title: "flow-tolerance",
+    body: "Defines a threshold below which column height differences are treated as a tie. Default: 1em.",
+  },
+  {
+    id: 6, size: "tall", tag: "FLOW TOLERANCE", accent: "#ff4778",
+    title: "How Chill Are Your Drivers?",
+    body: "Tolerance controls how picky the algorithm is. A low value means items aggressively seek the shortest column — tight packing, but visual shuffling. A high value means items flow left-to-right, only moving lanes for significant height differences. Set this for your content type.",
+    code: `.container {\n  flow-tolerance: 1em;  /* default */\n}\n\n/* Text-heavy: higher tolerance */\n/* Image galleries: lower tolerance */`,
+  },
+  {
+    id: 7, size: "medium", tag: "SPANNING", accent: "#ffdb47",
+    title: "Span Lanes for Hierarchy",
+    body: "Items can span multiple lanes using standard grid-column. This enables editorial hero layouts — a single large item alongside smaller companions in the same masonry flow.",
+    code: `article:nth-child(1) {\n  grid-column: span 4; /* hero */\n}\narticle:nth-child(2) {\n  grid-column: span 2; /* secondary */\n}`,
+  },
+  {
+    id: 8, size: "short", tag: "PLACEMENT", accent: "#47c8ff",
+    title: "Negative Index Pinning",
+    body: "Pin items to the last N columns regardless of viewport width using negative grid-column indices like -3 / -1.",
+  },
+  {
+    id: 9, size: "medium", tag: "LANE SIZING", accent: "#e8ff47",
+    title: "Alternating Columns",
+    body: "Because Grid Lanes uses full CSS Grid syntax, you can create alternating narrow–wide column rhythms that adapt to any viewport — with the first and last column always narrow.",
+    code: `grid-template-columns:\n  repeat(\n    auto-fill,\n    minmax(8rem, 1fr)\n    minmax(16rem, 2fr)\n  )\n  minmax(8rem, 1fr);`,
+  },
+  {
+    id: 10, size: "short", tag: "ACCESSIBILITY", accent: "#47ffb8",
+    title: "Keyboard Navigation",
+    body: "Items tab in DOM source order. flow-tolerance keeps focus movement natural across the visible layout.",
+  },
+  {
+    id: 11, size: "tall", tag: "VS. JAVASCRIPT", accent: "#ff8c47",
+    title: "No More Masonry.js",
+    body: "CSS Grid Lanes eliminates the need for JavaScript layout libraries. Zero dependencies, browser-native performance, infinite scroll without JS recalculation, and full CSS Grid power for spanning and placement. Resize handling is automatic.",
+    table: [
+      ["Feature", "CSS Grid Lanes", "JS Masonry"],
+      ["Dependencies", "None", "Library required"],
+      ["Infinite scroll", "Native", "JS recalculation"],
+      ["Keyboard nav", "Source order", "Can break"],
+      ["Responsive", "Automatic", "Resize handlers"],
+    ],
+  },
+  {
+    id: 12, size: "short", tag: "SPEC STATUS", accent: "#c847ff",
+    title: "Work In Progress",
+    body: "Direction control property still being finalised. Use the normal default to stay compatible with either outcome.",
+  },
+  {
+    id: 13, size: "medium", tag: "COMPLETE REFERENCE", accent: "#ff4778",
+    title: "Property Quick-Ref",
+    body: "Every property you need at a glance.",
+    table: [
+      ["Property", "Purpose"],
+      ["display: grid-lanes", "Activate container"],
+      ["grid-template-columns", "Vertical lanes"],
+      ["grid-template-rows", "Horizontal lanes"],
+      ["gap", "Spacing"],
+      ["grid-column", "Span / place"],
+      ["flow-tolerance", "Height tie threshold"],
+    ],
+  },
+  {
+    id: 14, size: "short", tag: "ZERO MEDIA QUERIES", accent: "#47c8ff",
+    title: "Fully Responsive",
+    body: "Column count adapts automatically to viewport width. No breakpoints needed.",
+  },
+];
+
+/* ══════════════════════════════════════════════════════════════
+   TOLERANCE DESCRIPTIONS
+══════════════════════════════════════════════════════════════ */
+const TOL_DESCRIPTIONS = {
+  "0em":   "Zero tolerance: aggressively seeks shortest column. Visual shuffling may confuse keyboard users.",
+  "0.5em": "Tight tolerance: mostly seeks shortest column. Good for dense image galleries.",
+  "1em":   "Default: differences under 1em treated as ties. Balanced packing vs. order.",
+  "3em":   "Relaxed tolerance: items flow left-to-right more often. Better for text-heavy content.",
+  "8em":   "High tolerance: strongly left-to-right flow. Predictable tab order, less dense packing.",
+};
+
+/* ══════════════════════════════════════════════════════════════
+   BUILD TABLE HTML
+══════════════════════════════════════════════════════════════ */
+function buildTable(rows) {
+  const [header, ...body] = rows;
+  const ths = header.map(h => `<th>${h}</th>`).join('');
+  const trs = body.map(row =>
+    `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
+  ).join('');
+  return `
+    <div class="table-block">
+      <table>
+        <thead><tr>${ths}</tr></thead>
+        <tbody>${trs}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BUILD CODE BLOCK HTML
+══════════════════════════════════════════════════════════════ */
+let copyCounter = 0;
+function buildCode(code) {
+  const id = `copy-${++copyCounter}`;
+  // Escape HTML entities for safe insertion
+  const escaped = code
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return `
+    <div class="code-block">
+      <pre>${escaped}</pre>
+      <button class="copy-btn" id="${id}" data-code="${encodeURIComponent(code)}">COPY</button>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BUILD CARD HTML
+══════════════════════════════════════════════════════════════ */
+function buildCard(card) {
+  const accentHex = card.accent;
+  // Hover glow colour at 24% opacity for box-shadow
+  const glowRgb = hexToRgb(accentHex);
+  const glowColor = glowRgb ? `rgba(${glowRgb},0.15)` : 'transparent';
+
+  const codeHtml  = card.code  ? buildCode(card.code)   : '';
+  const tableHtml = card.table ? buildTable(card.table)  : '';
+
+  return `
+    <article class="card card--${card.size}"
+             style="--card-accent:${accentHex}; --card-glow:${glowColor};"
+             data-accent="${accentHex}"
+             data-glow="${glowColor}">
+      <span class="card-accent-bar" style="background:${accentHex};"></span>
+      <span class="card-tag"  style="color:${accentHex};">${card.tag}</span>
+      <h2 class="card-title">${card.title}</h2>
+      <p class="card-body">${card.body}</p>
+      ${codeHtml}
+      ${tableHtml}
+    </article>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UTIL: hex → "R,G,B" string
+══════════════════════════════════════════════════════════════ */
+function hexToRgb(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : null;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER CARDS
+══════════════════════════════════════════════════════════════ */
+const grid = document.getElementById('masonry-grid');
+grid.innerHTML = CARDS.map(c =>
+  `<div class="masonry-card-wrap">${buildCard(c)}</div>`
+).join('');
+
+/* ══════════════════════════════════════════════════════════════
+   CARD HOVER — tint border + shadow
+══════════════════════════════════════════════════════════════ */
+grid.addEventListener('mouseover', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  card.style.borderColor = card.dataset.accent + '55';
+  card.style.boxShadow   = `0 8px 32px ${card.dataset.glow}`;
+});
+grid.addEventListener('mouseout', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  card.style.borderColor = '';
+  card.style.boxShadow   = '';
+});
+
+/* ══════════════════════════════════════════════════════════════
+   COPY BUTTONS
+══════════════════════════════════════════════════════════════ */
+grid.addEventListener('click', e => {
+  const btn = e.target.closest('.copy-btn');
+  if (!btn) return;
+  const text = decodeURIComponent(btn.dataset.code);
+  navigator.clipboard?.writeText(text).catch(() => {});
+  btn.textContent = '✓ COPIED';
+  btn.classList.add('copied');
+  setTimeout(() => {
+    btn.textContent = 'COPY';
+    btn.classList.remove('copied');
+  }, 1500);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   TOLERANCE SIMULATOR
+══════════════════════════════════════════════════════════════ */
+const tolDisplay = document.getElementById('tol-display');
+const tolDesc    = document.getElementById('tol-desc');
+const cssLive    = document.getElementById('css-live');
+const tolBtns    = document.querySelectorAll('.tolerance-btn');
+
+function buildLiveCss(tol) {
+  const pad = ' '.repeat(Math.max(0, 6 - tol.length));
+  return `.container {
+  display: grid-lanes;                                    /* ← the magic */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  flow-tolerance: ${tol};${pad}                    /* ← adjust above */
+}`;
+}
+
+tolBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tol = btn.dataset.tol;
+
+    // Update active state
+    tolBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Update display values
+    tolDisplay.textContent = tol;
+    tolDesc.textContent = TOL_DESCRIPTIONS[tol] || '';
+    cssLive.textContent = buildLiveCss(tol);
+
+    // If browser supports grid-lanes, also update the live grid
+    // (no-op in fallback browsers — columns layout is unaffected)
+    if (CSS.supports('display', 'grid-lanes')) {
+      document.getElementById('masonry-grid').style.setProperty('flow-tolerance', tol);
+    }
+  });
+});
+</script>
+</body>
+</html>
